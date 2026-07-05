@@ -18,41 +18,41 @@ class AnalizadorPII:
         self._cargar_reconocedores_personalizados()
 
     def _cargar_reconocedores_personalizados(self):
-        # --- RECONOCEDOR PARA CÉDULA / DNI ---
-        # Detecta secuencias de 10 dígitos (ej: Ecuador, Colombia)
-        # Puedes cambiar el regex si tu formato lleva guiones, ej: r"\b\d{2}-\d{7}-\d{1}\b"
-        patron_cedula = Pattern(
-            name="patron_cedula",
-            regex=r"\b\d{10}\b", 
-            score=0.95  # Nivel de confianza alto (0.0 a 1.0)
-        )
+        # 1. Cédula / DNI
         reconocedor_cedula = PatternRecognizer(
             supported_entity="CEDULA",
-            patterns=[patron_cedula],
+            patterns=[Pattern(name="patron_cedula", regex=r"\b\d{10}\b", score=0.95)],
             supported_language="es"
         )
 
-        # --- RECONOCEDOR PARA TELÉFONOS LOCALES ---
-        # Detecta formatos comunes de celular (ej: que empiecen con 09 y tengan 10 dígitos, o con +593)
-        patron_telefono = Pattern(
-            name="patron_telefono",
-            regex=r"\b(09\d{8}|\+?\d{2,3}\s?9\d{8})\b",
-            score=0.90
-        )
+        # 2. Teléfonos (Ampliando cobertura)
         reconocedor_telefono = PatternRecognizer(
             supported_entity="TELEFONO_CUSTOM",
-            patterns=[patron_telefono],
+            patterns=[Pattern(name="patron_telefono", regex=r"\b(?:\+?\d{1,3}[\s-]?)?(?:09\d{8}|[2-9]\d{6,8})\b", score=0.85)],
             supported_language="es"
         )
 
-        # Agregar los nuevos reconocedores al registro de Presidio
-        self.analizador.registry.add_recognizer(reconocedor_cedula)
-        self.analizador.registry.add_recognizer(reconocedor_telefono)
+        # 3. Correos Electrónicos (Forzando detección 100% precisa)
+        reconocedor_email = PatternRecognizer(
+            supported_entity="EMAIL_CUSTOM",
+            patterns=[Pattern(name="patron_email", regex=r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", score=1.0)],
+            supported_language="es"
+        )
 
+        # 4. Direcciones Físicas (Captura nomenclaturas comunes en español)
+        reconocedor_direccion = PatternRecognizer(
+            supported_entity="DIRECCION_CUSTOM",
+            patterns=[Pattern(name="patron_direccion", regex=r"\b(?:Av\.|Avenida|Calle|C\.|Pje\.|Pasaje|Blvd\.|Mz\.|Manzana|Lote|Sector)\s+[A-ZÁÉÍÓÚÑa-záéíóúñ0-9\s.,-]{5,50}\b", score=0.85)],
+            supported_language="es"
+        )
+
+        # Inyectar los reconocedores al motor
+        for reconocedor in [reconocedor_cedula, reconocedor_telefono, reconocedor_email, reconocedor_direccion]:
+            self.analizador.registry.add_recognizer(reconocedor)
+        
     def analizar_texto(self, texto):
-        # Definimos explícitamente la lista de entidades que queremos rastrear
-        # Mezclamos las nativas de spaCy (PERSON, ORG) con las nuestras (CEDULA, TELEFONO_CUSTOM)
-        entidades_a_buscar = ["PERSON", "ORG", "CEDULA", "TELEFONO_CUSTOM", "EMAIL"]
+        # nativas de spaCy (PERSON, ORG) con (CEDULA, TELEFONO_CUSTOM)
+        entidades_a_buscar = ["PERSON", "ORG", "CEDULA", "TELEFONO_CUSTOM", "EMAIL_CUSTOM", "DIRECCION_CUSTOM"]
         
         return self.analizador.analyze(
             text=texto,
