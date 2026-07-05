@@ -118,6 +118,9 @@ EMPRESAS_EC = [
     "Grupo Eljuri"
 ]
 
+prefijo_cedula = random.choice(["C.C.", "C.I.", "Cédula de Identidad", "DNI", "ID", "RUC/C.I."])
+prefijo_correo = random.choice(["correo electrónico", "email", "e-mail", "contacto digital"])
+
 # Algoritmo de Cédula Ecuatoriana (Módulo 10)
 def generar_cedula_ecuatoriana():
     provincia = random.randint(1, 24)
@@ -137,12 +140,11 @@ def generar_cedula_ecuatoriana():
     return f"{digits_9}{digito_verificador}"
 
 def generar_entidad_sensible():
-    nombre_completo = f"{fake.first_name()} {fake.first_name()} {fake.last_name()} {fake.last_name()}"
+    nombre_completo = fake.name()
     cedula = generar_cedula_ecuatoriana()
-    user_email = nombre_completo.lower().replace(" ", ".").replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
-    correo = f"{user_email}@{fake.domain_name()}"
-    direccion = f"{fake.street_address()} N{random.randint(10, 99)}-{random.randint(10, 99)} y {fake.street_address()}, {random.choice(CIUDADES_EC)}"
-    telefono = f"09{random.randint(8, 9)}{random.randint(100000, 999999)}"
+    correo = fake.ascii_email()
+    direccion = f"{fake.street_address()}, {random.choice(CIUDADES_EC)}, Ecuador"
+    telefono = fake.numerify("09########")
     salario = f"${random.randint(460, 4500)}.00"
     return {
         "Nombre": nombre_completo,
@@ -156,11 +158,12 @@ def generar_entidad_sensible():
 # --- GENERADORES DE CONTENIDO LEGAL ---
 def plantilla_contrato(data, empresa):
     fecha = datetime.now().strftime("%d/%m/%Y")
+    
     return f"""
     <b>CONTRATO INDIVIDUAL DE TRABAJO SUJETO A LA LOPDP</b><br/><br/>
     En {random.choice(CIUDADES_EC)}, con fecha {fecha}, comparecen por una parte <b>{empresa}</b> (EL EMPLEADOR); 
-    y por otra parte, <b>{data['Nombre']}</b>, portador(a) de la cédula de ciudadanía No. <b>{data['Cedula']}</b>, 
-    domiciliado(a) en <b>{data['Direccion']}</b>, teléfono <b>{data['Telefono']}</b> y correo electrónico 
+    y por otra parte, <b>{data['Nombre']}</b>, portador(a) de la {prefijo_cedula} <b>{data['Cedula']}</b>, 
+    domiciliado(a) en <b>{data['Direccion']}</b>, teléfono <b>{data['Telefono']}</b> y {prefijo_correo} 
     <b>{data['Correo']}</b> (EL TRABAJADOR).<br/><br/>
     <b>PRIMERA - OBJETO:</b> EL TRABAJADOR se compromete a prestar sus servicios lícitos y personales bajo dependencia.<br/><br/>
     <b>SEGUNDA - REMUNERACIÓN:</b> EL EMPLEADOR abonará la cantidad mensual de <b>{data['Salario']}</b>.<br/><br/>
@@ -173,8 +176,8 @@ def plantilla_nda(data, empresa):
     return f"""
     <b>ACUERDO DE NO DIVULGACIÓN (NDA) Y PROTECCIÓN DE DATOS</b><br/><br/>
     Conste por el presente documento, suscrito el {fecha}, el acuerdo de confidencialidad entre <b>{empresa}</b> 
-    y el consultor externo <b>{data['Nombre']}</b>, con C.C. <b>{data['Cedula']}</b>, dirección de notificación en 
-    <b>{data['Direccion']}</b> y contacto <b>{data['Correo']}</b>.<br/><br/>
+    y el consultor externo <b>{data['Nombre']}</b>, con {prefijo_cedula} <b>{data['Cedula']}</b>, dirección de notificación en 
+    <b>{data['Direccion']}</b> y {prefijo_correo} <b>{data['Correo']}</b>.<br/><br/>
     <b>CLÁUSULA DE CONFIDENCIALIDAD:</b> Toda información técnica, financiera o estratégica compartida estará protegida. 
     Las partes se someten a las sanciones de la LOPDP en caso de filtración de bases de datos o información no pública.
     """
@@ -234,18 +237,20 @@ def generar_rol_pagos(datos, empresa, styles, estilo_texto):
 
 def generar_acta_activos(datos, empresa, styles, estilo_texto):
     fecha = datetime.now().strftime("%d/%m/%Y")
+    serie_laptop = fake.bothify("S/N: ????-#######")
+    imei_cel = fake.bothify("IMEI: 86402##########")
     
     elementos = [
         Paragraph("<b>ACTA DE ENTREGA-RECEPCIÓN DE EQUIPOS CORPORATIVOS</b>", styles['Heading3']),
-        Paragraph(f"En Quito, con fecha {fecha}, la gerencia de TI de <b>{empresa}</b> hace entrega formal al custodio <b>{datos['Nombre']}</b>, portador de la C.C. <b>{datos['Cedula']}</b>, de los siguientes activos corporativos:", estilo_texto),
+        Paragraph(f"En Quito, con fecha {fecha}, la gerencia de TI de <b>{empresa}</b> hace entrega formal al custodio <b>{datos['Nombre']}</b>, portador de la {prefijo_cedula} <b>{datos['Cedula']}</b>, de los siguientes activos corporativos:", estilo_texto),
         Spacer(1, 15)
     ]
 
     tabla_activos = [
         ["CÓDIGO", "DESCRIPCIÓN DEL EQUIPO", "SERIE / SERVICE TAG", "VALOR"],
-        ["LPT-042", "Laptop Dell Latitude 5420", f"S/N: {random.randint(1000000,9999999)}", "$1,250.00"],
-        ["CEL-109", "Samsung Galaxy A54", f"IMEI: 86402{random.randint(1000000000,9999999999)}", "$380.00"],
-        ["MNT-881", "Monitor LG 24 pulgadas", f"S/N: {random.randint(100000,999999)}", "$190.00"]
+        ["LPT-042", "Laptop Dell Latitude 5420", serie_laptop, "$1,250.00"],
+        ["CEL-109", "Samsung Galaxy A54", imei_cel, "$380.00"],
+        ["MNT-881", "Monitor LG 24 pulgadas", fake.bothify('S/N: CN-######'), "$190.00"]
     ]
 
     t = Table(tabla_activos, colWidths=[80, 182, 170, 80])
@@ -275,7 +280,7 @@ def generar_solicitud_lopdp(datos, empresa, styles, estilo_texto):
 
     elementos = [
         Paragraph("<b>FORMULARIO DE EJERCICIO DE DERECHOS - LOPDP (ECUADOR)</b>", styles['Heading3']),
-        Paragraph(f"<b>Titular de los datos:</b> {datos['Nombre']}<br/><b>Cédula de Identidad:</b> {datos['Cedula']}<br/><b>Correo de notificación:</b> {datos['Correo']}", estilo_texto),
+        Paragraph(f"<b>Titular de los datos:</b> {datos['Nombre']}<br/><b>{prefijo_cedula}:</b> {datos['Cedula']}<br/><b>{prefijo_correo}:</b> {datos['Correo']}", estilo_texto),
         Spacer(1, 15)
     ]
 
@@ -305,9 +310,9 @@ def generar_solicitud_lopdp(datos, empresa, styles, estilo_texto):
 # =====================================================================
 
 def generar_factura_comercial(datos, empresa, styles, estilo_texto):
-    num_factura = f"001-002-{random.randint(100000000, 999999999)}"
-    clave_acceso = "".join([str(random.randint(0,9)) for _ in range(49)]) # Clave SRI de 49 dígitos
-    subtotal = float(random.randint(100, 900))
+    num_factura = f"001-002-{fake.numerify('#########')}"
+    clave_acceso = fake.numerify("#" * 49)
+    subtotal = float(random.randint(150, 1200))
     iva15 = round(subtotal * 0.15, 2)
 
     datos['Clave_Acceso_SRI'] = clave_acceso
@@ -316,7 +321,7 @@ def generar_factura_comercial(datos, empresa, styles, estilo_texto):
         Paragraph(f"<b>FACTURA COMERCIAL</b> | No. {num_factura}", styles['Heading3']),
         Paragraph(f"<font size=7><b>CLAVE DE ACCESO SRI:</b> {clave_acceso}</font>", estilo_texto),
         Spacer(1, 10),
-        Paragraph(f"<b>Cliente:</b> {datos['Nombre']}<br/><b>RUC/C.I.:</b> {datos['Cedula']}<br/><b>Dirección:</b> {datos['Direccion']}", estilo_texto),
+        Paragraph(f"<b>Cliente:</b> {datos['Nombre']}<br/><b>{prefijo_cedula}:</b> {datos['Cedula']}<br/><b>Dirección:</b> {datos['Direccion']}", estilo_texto),
         Spacer(1, 15)
     ]
 
@@ -381,7 +386,7 @@ def generar_batch_pdf(cantidad=10, directorio_salida="dataset_sintetico_lopdp"):
             story.extend(generar_factura_comercial(datos, empresa, styles, estilo_texto))
         
         story.append(Spacer(1, 40))
-        story.append(Table([[Paragraph(f"<b>p. {empresa}</b>", estilo_texto), Paragraph(f"<b>{datos['Nombre']}</b><br/>C.C. {datos['Cedula']}", estilo_texto)]], colWidths=[250, 250]))
+        story.append(Table([[Paragraph(f"<b>p. {empresa}</b>", estilo_texto), Paragraph(f"<b>{datos['Nombre']}</b><br/>{prefijo_cedula} {datos['Cedula']}", estilo_texto)]], colWidths=[250, 250]))
         
         doc.build(story)
         
