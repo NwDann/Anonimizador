@@ -398,7 +398,7 @@
     lucide.createIcons();
   });
 
-  // Drag & drop visual feedback (front-end only demo)
+  // Drag & drop visual feedback y conexión con la API
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('file-input');
 
@@ -428,10 +428,73 @@
     if (file) handleFile(file);
   });
 
-  function handleFile(file) {
+  // Nueva función para comunicarse con FastAPI
+  async function handleFile(file) {
     const label = dropzone.querySelector('p.text-white');
-    if (label) {
-      label.textContent = file.name.length > 40 ? file.name.slice(0, 37) + '…' : file.name;
+    const subLabel = dropzone.querySelector('p.text-sm');
+    const originalText = label.textContent;
+    const originalSubText = subLabel.textContent;
+
+    // Validación básica
+    if (file.type !== 'application/pdf') {
+      alert('Por favor, sube únicamente archivos PDF.');
+      return;
+    }
+
+    // Feedback visual mientras carga
+    label.textContent = 'Aplicando IA y censurando documento...';
+    subLabel.textContent = `Procesando: ${file.name}`;
+    dropzone.style.cursor = 'wait';
+    dropzone.style.pointerEvents = 'none';
+
+    // Preparar el archivo para el envío
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // Llamar a la API local de FastAPI
+      const response = await fetch('http://127.0.0.1:8000/api/anonimizar', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error en el servidor: ${response.status}`);
+      }
+
+      // Recibir el PDF procesado como un archivo binario (Blob)
+      const blob = await response.blob();
+      
+      // Crear un enlace temporal para forzar la descarga
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `anonimo_${file.name}`; // Nombre del archivo de salida
+      document.body.appendChild(a);
+      a.click();
+      
+      // Limpieza de memoria
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // Feedback de éxito
+      label.textContent = '¡Documento seguro descargado con éxito!';
+      subLabel.textContent = 'Puedes subir otro archivo';
+
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Ocurrió un error. Asegúrate de que tu servidor FastAPI (uvicorn) esté corriendo.');
+      label.textContent = 'Error al procesar el documento';
+    } finally {
+      // Restaurar el estado original de la zona de arrastre después de 3 segundos
+      setTimeout(() => {
+        label.textContent = originalText;
+        subLabel.textContent = originalSubText;
+        dropzone.style.cursor = 'pointer';
+        dropzone.style.pointerEvents = 'auto';
+        fileInput.value = ''; // Limpiar el input para permitir subir el mismo archivo de nuevo
+      }, 3500);
     }
   }
 </script>
