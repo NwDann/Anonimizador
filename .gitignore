@@ -2,3 +2,5 @@ venv
 dataset_sintetico_lopdp
 src/__pycache__
 __pycache__
+build
+dist
